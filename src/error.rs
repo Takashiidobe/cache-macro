@@ -1,6 +1,5 @@
+use proc_macro2_diagnostics::Diagnostic;
 use std::result;
-use proc_macro::Diagnostic;
-use syn;
 
 pub struct DiagnosticError {
     diagnostic: Diagnostic,
@@ -15,7 +14,10 @@ impl DiagnosticError {
             syn_error: None,
         }
     }
-    pub fn new_with_syn_error(diagnostic: Diagnostic, syn_error: syn::parse::Error) -> DiagnosticError {
+    pub fn new_with_syn_error(
+        diagnostic: Diagnostic,
+        syn_error: syn::parse::Error,
+    ) -> DiagnosticError {
         DiagnosticError {
             diagnostic,
             syn_error: Some(syn_error),
@@ -28,7 +30,7 @@ impl DiagnosticError {
     }
 
     pub fn emit(self) {
-        self.diagnostic.emit();
+        self.diagnostic.emit_as_expr_tokens();
     }
 }
 

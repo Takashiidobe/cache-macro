@@ -1,9 +1,9 @@
-use std::default::Default;
 use std::collections::HashSet;
+use std::default::Default;
 
-use proc_macro2;
-use syn::{self, Token, parenthesized};
+use proc_macro2_diagnostics::Diagnostic;
 use syn::parse::{Parse, ParseStream};
+use syn::{self, parenthesized, Token};
 
 use crate::error::{DiagnosticError, Result};
 
@@ -21,12 +21,14 @@ enum ConfigAttrib {
     UseTls,
 }
 
-const CONFIG_ATTRIBUTE_NAME: &'static str = "cache_cfg";
+const CONFIG_ATTRIBUTE_NAME: &str = "cache_cfg";
 
 impl Config {
     // Parse any additional attributes present after `lru_cache` and return a configuration object
     // created from their contents. Additionally, return any attributes that were not handled here.
-    pub fn parse_from_attributes(attribs: &[syn::Attribute]) -> Result<(Config, Vec<syn::Attribute>)> {
+    pub fn parse_from_attributes(
+        attribs: &[syn::Attribute],
+    ) -> Result<(Config, Vec<syn::Attribute>)> {
         let mut parsed_attributes = Vec::new();
         let mut remaining_attributes = Vec::new();
 
@@ -39,13 +41,15 @@ impl Config {
                     match parsed {
                         Ok(parsed_attrib) => parsed_attributes.push(parsed_attrib),
                         Err(e) => {
-                            let diag = e.span().unstable()
-                                .error(format!("{}", e));
+                            let diag = Diagnostic::new(
+                                proc_macro2_diagnostics::Level::Error,
+                                format!("{}", e),
+                            );
+
                             return Err(DiagnosticError::new_with_syn_error(diag, e));
                         }
                     }
-                }
-                else {
+                } else {
                     remaining_attributes.push(attrib.clone());
                 }
             }
@@ -80,11 +84,14 @@ impl Parse for ConfigAttrib {
         let name = content.parse::<syn::Ident>()?;
 
         match &name.to_string()[..] {
-            "ignore_args" => Ok(ConfigAttrib::IgnoreArgs(content.parse::<IgnoreArgsAttrib>()?)),
+            "ignore_args" => Ok(ConfigAttrib::IgnoreArgs(
+                content.parse::<IgnoreArgsAttrib>()?,
+            )),
             "thread_local" => Ok(ConfigAttrib::UseTls),
             _ => Err(syn::parse::Error::new(
-                name.span(), format!("unrecognized config option '{}'", name.to_string())
-            ))
+                name.span(),
+                format!("unrecognized config option '{}'", name.to_string()),
+            )),
         }
     }
 }
